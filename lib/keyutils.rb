@@ -1,5 +1,6 @@
 require "keyutils/version"
+require "keyutils/lib"
 
 module Keyutils
-  # Your code goes here...
+  LIBRARY_VERSION = Lib.keyutils_version_string[/[\d.]+/].freeze
 end

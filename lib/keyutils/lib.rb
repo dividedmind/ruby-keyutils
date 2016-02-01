@@ -1,12 +1,18 @@
 require 'ffi'
 
-module KeyUtils
+module Keyutils
   module Lib
     extend FFI::Library
     ffi_lib %w(keyutils keyutils.so.1)
 
-    attach_variable :keyutils_version_string, :string
-    attach_variable :keyutils_build_string, :string
+    def self.attach_text_string name
+      lib = ffi_libraries.first
+      val = lib.find_variable(name.to_s).get_string 0
+      singleton_class.send :define_method, name, ->() { val }
+    end
+
+    attach_text_string :keyutils_version_string
+    attach_text_string :keyutils_build_string
 
     # key serial number
     typedef :int32_t, :key_serial_t
@@ -35,7 +41,7 @@ module KeyUtils
     }
 
     # key handle permissions mask
-    typedef :uint32_t, :key_perm_t;
+    typedef :uint32, :key_perm_t;
 
     KEY_POS = {
       VIEW: 0x01000000, # possessor can view a key's attributes
@@ -177,13 +183,13 @@ module KeyUtils
     attach_function :keyctl_instantiate, [:key_serial_t, :pointer, :size_t, :key_serial_t], :long
 
     # extern long keyctl_negate(key_serial_t id, unsigned timeout, key_serial_t ringid);
-    attach_function :keyctl_negate, [:key_serial_t, :unsigned, :key_serial_t], :long
+    attach_function :keyctl_negate, [:key_serial_t, :uint, :key_serial_t], :long
 
     # extern long keyctl_set_reqkey_keyring(int reqkey_defl);
     attach_function :keyctl_set_reqkey_keyring, [:int], :long
 
     # extern long keyctl_set_timeout(key_serial_t key, unsigned timeout);
-    attach_function :keyctl_set_timeout, [:key_serial_t, :unsigned], :long
+    attach_function :keyctl_set_timeout, [:key_serial_t, :uint], :long
 
     # extern long keyctl_assume_authority(key_serial_t key);
     attach_function :keyctl_assume_authority, [:key_serial_t], :long
@@ -196,14 +202,14 @@ module KeyUtils
 
     # extern long keyctl_reject(key_serial_t id, unsigned timeout, unsigned error,
     # 			  key_serial_t ringid);
-    attach_function :keyctl_reject, [:key_serial_t, :unsigned, :unsigned, :key_serial_t], :long
+    attach_function :keyctl_reject, [:key_serial_t, :uint, :uint, :key_serial_t], :long
 
     # struct iovec;
     # extern long keyctl_instantiate_iov(key_serial_t id,
     # 				   const struct iovec *payload_iov,
     # 				   unsigned ioc,
     # 				   key_serial_t ringid);
-    attach_function :keyctl_instantiate_iov, [:key_serial_t, :pointer, :unsigned, :key_serial_t], :long
+    attach_function :keyctl_instantiate_iov, [:key_serial_t, :pointer, :uint, :key_serial_t], :long
 
     # extern long keyctl_invalidate(key_serial_t id);
     attach_function :keyctl_invalidate, [:key_serial_t], :long

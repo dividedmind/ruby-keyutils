@@ -14,8 +14,19 @@ module Keyutils
     attach_text_string :keyutils_version_string
     attach_text_string :keyutils_build_string
 
+    # When used on return values, raises a system call error if -1
+    module KeySerialConverter
+      extend FFI::DataConverter
+      native_type FFI::Type::INT32
+
+      def self.from_native val, ctx
+        fail SystemCallError, FFI.errno, caller if val == -1
+        super
+      end
+    end
+
     # key serial number
-    typedef :int32_t, :key_serial_t
+    typedef KeySerialConverter, :key_serial_t
 
     # special process keyring shortcut IDs
     KEY_SPEC = {

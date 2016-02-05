@@ -158,7 +158,8 @@ module Keyutils
       ENOMEM => "Insufficient memory to create a key",
       EDQUOT => "The key quota for this user would be exceeded by " \
         "creating this key or linking it to the keyring",
-      EACCES => "The keyring wasn't available for modification by the user"
+      EACCES => "The keyring wasn't available for modification by the user",
+      ENODEV => "The key type was invalid"
     }
 
     # extern key_serial_t request_key(const char *type,

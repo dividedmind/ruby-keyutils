@@ -3,11 +3,10 @@ require 'ffi'
 module Keyutils
   module Lib
     extend FFI::Library
-    ffi_lib %w(keyutils keyutils.so.1)
+    @@lib = (ffi_lib %w(keyutils keyutils.so.1)).first
 
     def self.attach_text_string name
-      lib = ffi_libraries.first
-      val = lib.find_variable(name.to_s).get_string 0
+      val = @@lib.find_variable(name.to_s).get_string 0
       singleton_class.send :define_method, name, ->() { val }
     end
 
@@ -124,6 +123,24 @@ module Keyutils
       GET_PERSISTENT: 22 # get a user's persistent keyring
     }
 
+    # Attach a C function that can raise error (eg. through return type
+    # converter), allowing to provide errorclass => description map
+    def self.attach_function fname, *a, errors: {}, **kwargs
+      function = FFI::Library.instance_method(:attach_function).bind(self).call fname, *a, **kwargs
+      singleton_class.send :define_method, fname, ->(*a) do
+        begin
+          function.call *a
+        rescue Exception => e
+          msg = errors[e.class] || e.message
+          call = caller_locations(2, 1).first
+          call_desc = "#{call.absolute_path}:#{call.lineno}:in `#{fname}'"
+          raise e, msg, [call_desc] + caller(2)
+        end
+      end
+    end
+
+    include Errno
+
     #
     # syscall wrappers
     #
@@ -133,7 +150,16 @@ module Keyutils
     #       const void *payload,
     #       size_t plen,
     #       key_serial_t ringid);
-    attach_function :add_key, [:string, :string, :pointer, :size_t, :key_serial_t], :key_serial_t
+    attach_function :add_key, [:string, :string, :pointer, :size_t, :key_serial_t], :key_serial_t, errors: {
+      ENOKEY => "The keyring doesn't exist",
+      EKEYEXPIRED => "The keyring has expired",
+      EKEYREVOKED => "The keyring has been revoked",
+      EINVAL => "The payload data was invalid",
+      ENOMEM => "Insufficient memory to create a key",
+      EDQUOT => "The key quota for this user would be exceeded by " \
+        "creating this key or linking it to the keyring",
+      EACCES => "The keyring wasn't available for modification by the user"
+    }
 
     # extern key_serial_t request_key(const char *type,
     # 				const char *description,

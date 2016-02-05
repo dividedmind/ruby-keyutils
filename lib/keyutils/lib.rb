@@ -193,7 +193,13 @@ module Keyutils
     }
 
     # extern key_serial_t keyctl_join_session_keyring(const char *name);
-    attach_function :keyctl_join_session_keyring, [:string], :key_serial_t
+    attach_function :keyctl_join_session_keyring, [:string], :key_serial_t, errors: {
+      ENOMEM => "Insufficient memory to create a key",
+      EDQUOT => "The key quota for this user would be exceeded by creating "\
+        "this key or linking it to the keyring",
+      EACCES => "The named keyring exists, but is not searchable by the "\
+        "calling process"
+    }
 
     # extern long keyctl_update(key_serial_t id, const void *payload, size_t plen);
     attach_function :keyctl_update, [:key_serial_t, :pointer, :size_t], :long

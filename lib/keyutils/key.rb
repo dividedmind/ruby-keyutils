@@ -139,7 +139,7 @@ module Keyutils
       # @raise [Errno::EKEYREJECTED] the attempt to generate a new key was rejected
       # @raise [Errno::EKEYREVOKED] a revoked key was found, but no replacement could be obtained
       # @raise [Errno::ENOMEM] insufficient memory to create a key
-      def request type, description, callout_info = nil, keyring = Keyring::Thread
+      def request type, description, callout_info = '', keyring = Keyring::Thread
         serial = Lib.request_key \
             type.to_s,
             description,

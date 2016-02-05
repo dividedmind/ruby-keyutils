@@ -72,7 +72,7 @@ module Keyutils
       Lib.keyctl_update \
           id,
           payload && payload.to_s,
-          payload && payload.length || 0
+          payload && payload.to_s.length || 0
       self
     end
 
@@ -280,6 +280,51 @@ module Keyutils
 
     alias to_s read
 
+    # Instantiate a key
+    #
+    # Instantiate the payload of an uninstantiated key from the data specified.
+    # +payload+ specifies the data for the new payload. +payload+ may be nil
+    # if the key type permits that. The key type may reject the data if it's
+    # in the wrong format or in some other way invalid.
+    #
+    # Only a key for which authority has been assumed may be instantiated or
+    # negatively instantiated, and once instantiated, the authorisation key
+    # will be revoked and the requesting process will be able to resume.
+    #
+    # The +destination+ keyring, if given, is assumed to belong to the initial
+    # requester, and not the instantiating process. Therefore, the special
+    # keyring objects (such as {Keyring::Session}) refer to the requesting
+    # process's keyrings, not the caller's, and the requester's UID, etc. will
+    # be used to access them.
+    #
+    # The +destination+ keyring can be nil if no extra link is desired.
+    #
+    # The requester, not the caller, must have write permission on the
+    # +destination+ for a link to be made there.
+    # @param payload [String, nil] the payload to instantiate the key with
+    # @param destination [Keyring, nil] keyring to link the key to
+    # @return [Key] self
+    # @raise [Errno::ENOKEY] the key or specified keyring is invalid
+    # @raise [Errno::EKEYEXPIRED] the keyring specified has expired
+    # @raise [Errno::EKEYREVOKED] the key or keyring specified had been
+    #   revoked, or the authorisation has been revoked
+    # @raise [Errno::EINVAL] the payload data was invalid
+    # @raise [Errno::ENOMEM] insufficient memory to store the new payload or
+    #   to expand the destination keyring
+    # @raise [Errno::EDQUOT] the key quota for the key's user would be
+    #   exceeded by increasing the size of the key to accommodate the new
+    #   payload or the key quota for the keyring's user would be exceeded by
+    #   expanding the destination keyring
+    # @raise [Errno::EACCES] the key exists, but is not writable by the
+    #   requester
+    def instantiate payload, destination = nil
+      Lib.keyctl_instantiate id,
+          payload && payload.to_s,
+          payload && payload.to_s.length || 0,
+          destination.id
+      self
+    end
+
     class << self
       # Add a key to the kernel's key management facility.
       #
@@ -323,7 +368,7 @@ module Keyutils
             type.to_s,
             description,
             payload && payload.to_s,
-            payload && payload.length || 0,
+            payload && payload.to_s.length || 0,
             keyring.to_i
         new_dispatch serial, type.intern, description
       end

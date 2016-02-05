@@ -287,10 +287,33 @@ module Keyutils
     # 			       const void *payload,
     # 			       size_t plen,
     # 			       key_serial_t ringid);
-    attach_function :keyctl_instantiate, [:key_serial_t, :pointer, :size_t, :key_serial_t], :long
+    attach_function :keyctl_instantiate, [:key_serial_t, :pointer, :size_t, :key_serial_t], :long_e, :errors: {
+      ENOKEY => "The key or keyring specified is invalid",
+      EKEYEXPIRED => "The keyring specified has expired",
+      EKEYREVOKED => "The key or keyring specified had been revoked, or the "\
+        "authorisation has been revoked",
+      EINVAL => "The payload data was invalid",
+      ENOMEM => "Insufficient memory to store the new payload or to expand "\
+        "the destination keyring",
+      EDQUOT => "The  key quota for the key's user would be exceeded by "\
+        "increasing the size of the key to accommodate the new payload or the "\
+        "key quota for the keyring's user would be exceeded by expanding the "\
+        "destination keyring",
+      EACCES => "The key exists, but is not writable by the requester",
+    }
 
     # extern long keyctl_negate(key_serial_t id, unsigned timeout, key_serial_t ringid);
-    attach_function :keyctl_negate, [:key_serial_t, :uint, :key_serial_t], :long
+    attach_function :keyctl_negate, [:key_serial_t, :uint, :key_serial_t], :long_e, errors: {
+      ENOKEY => "The key or keyring specified is invalid",
+      EKEYEXPIRED => "The keyring specified has expired",
+      EKEYREVOKED => "The key or keyring specified had been revoked, or the "\
+        "authorisation has been revoked",
+      EDQUOT => "The  key quota for the key's user would be exceeded by "\
+        "increasing the size of the key to accommodate the new payload or the "\
+        "key quota for the keyring's user would be exceeded by expanding the "\
+        "destination keyring",
+      EACCES => "The key exists, but is not writable by the requester"
+    }
 
     # extern long keyctl_set_reqkey_keyring(int reqkey_defl);
     attach_function :keyctl_set_reqkey_keyring, [:int], :long

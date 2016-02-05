@@ -166,7 +166,16 @@ module Keyutils
     # 				const char *description,
     # 				const char *callout_info,
     # 				key_serial_t destringid);
-    attach_function :request_key, [:string, :string, :string, :key_serial_t], :key_serial_t
+    attach_function :request_key, [:string, :string, :string, :key_serial_t], :key_serial_t, errors: {
+      EACCES => "The keyring wasn't available for modification by the user",
+      EINTR => "The request was interrupted by a signal",
+      EDQUOT => "The key quota for this user would be exceeded by creating this key or linking it to the keyring",
+      EKEYEXPIRED => "An expired key was found, but no replacement could be obtained",
+      EKEYREJECTED => "The attempt to generate a new key was rejected",
+      EKEYREVOKED => "A revoked key was found, but no replacement could be obtained",
+      ENOMEM => "Insufficient memory to create a key",
+      ENOKEY => "No matching key was found"
+    }
 
     # extern long keyctl(int cmd, ...);
     attach_function :keyctl, [:int, :varargs], :long

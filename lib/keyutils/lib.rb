@@ -275,7 +275,13 @@ module Keyutils
     }
 
     # extern long keyctl_read(key_serial_t id, char *buffer, size_t buflen);
-    attach_function :keyctl_read, [:key_serial_t, :pointer, :size_t], :long
+    attach_function :keyctl_read, [:key_serial_t, :pointer, :size_t], :long_e, errors: {
+      ENOKEY => "The key specified is invalid",
+      EKEYEXPIRED => "The key specified has expired",
+      EKEYREVOKED => "The key specified had been revoked",
+      EACCES => "The key exists, but is not readable by the calling process",
+      EOPNOTSUPP => "The key type does not support reading of the payload data"
+    }
 
     # extern long keyctl_instantiate(key_serial_t id,
     # 			       const void *payload,

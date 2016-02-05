@@ -114,6 +114,28 @@ module Keyutils
     rescue Errno::ENOKEY
       nil
     end
+
+    # Read the keyring.
+    #
+    # Reads the list of keys in this keyring.
+    #
+    # The caller must have read permission on a key to be able to read it.
+    #
+    # @return [<Key>] the keyring members
+    # @raise [Errno::ENOKEY] the keyring is invalid
+    # @raise [Errno::EKEYEXPIRED] the keyring has expired
+    # @raise [Errno::EKEYREVOKED] the keyring had been revoked
+    # @raise [Errno::EACCES] the keyring is not readable by the calling process
+    # @see #keys
+    def read
+      super.unpack('L*').map do |serial|
+        # try to map to the correct class
+        key = Key.send :new, serial, nil, nil
+        Key.send(:new_dispatch, serial, key.type, key.description) rescue key
+      end
+    end
+    alias to_a read
+    undef to_s
   end
 
   # This module contains the additional methods included in {Keyutils::Keyring::Session}.

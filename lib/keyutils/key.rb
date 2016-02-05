@@ -254,6 +254,32 @@ module Keyutils
       }
     end
 
+    # Read the key.
+    #
+    # Reads the payload of a key if the key type supports it.
+    #
+    # The caller must have read permission on a key to be able to read it.
+    #
+    # @return [String] the key payload
+    # @raise [Errno::ENOKEY] the key is invalid
+    # @raise [Errno::EKEYEXPIRED] the key has expired
+    # @raise [Errno::EKEYREVOKED] the key had been revoked
+    # @raise [Errno::EACCES] the key exists, but is not readable by the
+    #   calling process
+    # @raise [Errno::EOPNOTSUPP] the key type does not support reading of the
+    #   payload data
+    def read
+      buf = FFI::MemoryPointer.new :char, 64
+      len = Lib.keyctl_read id, buf, buf.size
+      while len > buf.size
+        buf = FFI::MemoryPointer.new :char, len
+        len = Lib.keyctl_read id, buf, buf.size
+      end
+      buf.read_string len
+    end
+
+    alias to_s read
+
     class << self
       # Add a key to the kernel's key management facility.
       #

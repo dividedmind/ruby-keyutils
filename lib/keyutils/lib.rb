@@ -228,10 +228,28 @@ module Keyutils
         }
 
     # extern long keyctl_revoke(key_serial_t id);
-    attach_function :keyctl_revoke, [:key_serial_t], :long
+    attach_function \
+        :keyctl_revoke,
+        [:key_serial_t],
+        NonnegativeOrErrorLongConverter,
+        errors: {
+          ENOKEY => "The specified key does not exist",
+          EKEYREVOKED => "The key has already been revoked",
+          EACCES => "The named key exists, but is not writable by the calling process",
+        }
 
     # extern long keyctl_chown(key_serial_t id, uid_t uid, gid_t gid);
-    attach_function :keyctl_chown, [:key_serial_t, :uid_t, :gid_t], :long
+    attach_function \
+        :keyctl_chown,
+        [:key_serial_t, :uid_t, :gid_t],
+        NonnegativeOrErrorLongConverter,
+        errors: {
+          ENOKEY => "The specified key does not exist",
+          EKEYEXPIRED => "The specified key has expired",
+          EKEYREVOKED => "The specified key has been revoked",
+          EDQUOT => "Changing the UID to the one specified would run that UID "\
+            "out of quota",
+        }
 
     # extern long keyctl_setperm(key_serial_t id, key_perm_t perm);
     attach_function :keyctl_setperm, [:key_serial_t, :key_perm_t], :long

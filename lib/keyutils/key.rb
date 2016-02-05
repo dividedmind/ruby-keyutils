@@ -45,9 +45,7 @@ module Keyutils
       false
     end
 
-    # Update the key.
-    #
-    # Updates the payload of the key if the key type permits it.
+    # Update the payload of the key if the key type permits it.
     #
     # The caller must have write permission on the key to be able to update it.
     #
@@ -75,9 +73,7 @@ module Keyutils
           payload && payload.length || 0
     end
 
-    # Revoke the key.
-    #
-    # Marks the key as being revoked.
+    # Mark the key as being revoked.
     #
     # After this operation has been performed on a key, attempts to access it
     # will meet with error EKEYREVOKED.
@@ -91,6 +87,32 @@ module Keyutils
     #   calling process
     def revoke
       Lib.keyctl_revoke serial
+    end
+
+    # Change the user and group ownership details of the key.
+    #
+    # A setting of -1 or nil on either +uid+ or +gid+ will cause that setting
+    # to be ignored.
+    #
+    # A process that does not have the _SysAdmin_ capability may not change a
+    # key's UID or set the key's GID to a value that does not match the
+    # process's GID or one of its group list.
+    #
+    # The caller must have _setattr_ permission on a key to be able change its
+    # ownership.
+    #
+    # @param uid [Fixnum, nil] numeric UID of the new owner
+    # @param gid [Fixnum, nil] numeric GID of the new owning group
+    # @return [void]
+    # @raise [Errno::ENOKEY] the key does not exist
+    # @raise [Errno::EKEYEXPIRED] the key has expired
+    # @raise [Errno::EKEYREVOKED] the key has been revoked
+    # @raise [Errno::EDQUOT] changing the UID to the one specified would run
+    #   that UID out of quota
+    # @raise [Errno::EACCES] the key exists, but does not grant setattr
+    #   permission to the calling process; or insufficient process permissions
+    def chown uid = nil, gid = nil
+      Lib.keyctl_chown serial, uid || -1, gid || -1
     end
 
     class << self

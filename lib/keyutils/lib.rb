@@ -51,50 +51,7 @@ module Keyutils
     }
 
     # key handle permissions mask
-    typedef :uint32, :key_perm_t;
-
-    KEY_POS = {
-      VIEW: 0x01000000, # possessor can view a key's attributes
-      READ: 0x02000000, # possessor can read key payload / view keyring
-      WRITE: 0x04000000, # possessor can update key payload / add link to keyring
-      SEARCH: 0x08000000, # possessor can find a key in search / search a keyring
-      LINK: 0x10000000, # possessor can create a link to a key/keyring
-      SETATTR: 0x20000000, # possessor can set key attributes
-      ALL: 0x3f000000
-    }
-
-    # user permissions...
-    KEY_USR = {
-      VIEW: 0x00010000,
-      READ: 0x00020000,
-      WRITE: 0x00040000,
-      SEARCH: 0x00080000,
-      LINK: 0x00100000,
-      SETATTR: 0x00200000,
-      ALL: 0x003f0000
-    }
-
-    # group permissions...
-    KEY_GRP = {
-      VIEW: 0x00000100,
-      READ: 0x00000200,
-      WRITE: 0x00000400,
-      SEARCH: 0x00000800,
-      LINK: 0x00001000,
-      SETATTR: 0x00002000,
-      ALL: 0x00003f00
-    }
-
-    # third party permissions...
-    KEY_OTH = {
-      VIEW: 0x00000001,
-      READ: 0x00000002,
-      WRITE: 0x00000004,
-      SEARCH: 0x00000008,
-      LINK: 0x00000010,
-      SETATTR: 0x00000020,
-      ALL: 0x0000003f
-    }
+    typedef :uint32, :key_perm_t
 
     # keyctl commands
     KEYCTL = {
@@ -211,11 +168,13 @@ module Keyutils
       end
     end
 
+    typedef NonnegativeOrErrorLongConverter, :long_e
+
     # extern long keyctl_update(key_serial_t id, const void *payload, size_t plen);
     attach_function \
         :keyctl_update,
         [:key_serial_t, :pointer, :size_t],
-        NonnegativeOrErrorLongConverter,
+        :long_e,
         errors: {
           ENOKEY => "The key specified is invalid",
           EKEYEXPIRED => "The key specified has expired",
@@ -231,7 +190,7 @@ module Keyutils
     attach_function \
         :keyctl_revoke,
         [:key_serial_t],
-        NonnegativeOrErrorLongConverter,
+        :long_e,
         errors: {
           ENOKEY => "The specified key does not exist",
           EKEYREVOKED => "The key has already been revoked",
@@ -242,7 +201,7 @@ module Keyutils
     attach_function \
         :keyctl_chown,
         [:key_serial_t, :uid_t, :gid_t],
-        NonnegativeOrErrorLongConverter,
+        :long_e,
         errors: {
           ENOKEY => "The specified key does not exist",
           EKEYEXPIRED => "The specified key has expired",
@@ -252,7 +211,13 @@ module Keyutils
         }
 
     # extern long keyctl_setperm(key_serial_t id, key_perm_t perm);
-    attach_function :keyctl_setperm, [:key_serial_t, :key_perm_t], :long
+    attach_function :keyctl_setperm, [:key_serial_t, :key_perm_t], :long_e, errors: {
+      ENOKEY => "The specified key does not exist",
+      EKEYEXPIRED => "The specified key has expired",
+      EKEYREVOKED => "The specified key has been revoked",
+      EACCES => "The named key exists, but does not grant setattr permission "\
+        "to the calling process",
+    }
 
     # extern long keyctl_describe(key_serial_t id, char *buffer, size_t buflen);
     attach_function :keyctl_describe, [:key_serial_t, :pointer, :size_t], :long

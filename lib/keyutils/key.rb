@@ -1,3 +1,5 @@
+require 'keyutils/key_perm'
+
 module Keyutils
   class Key
     # Numeric identifier of the key this object points to.
@@ -54,7 +56,7 @@ module Keyutils
     # in the wrong format or in some other way invalid.
     #
     # @param payload [#to_s, nil] data for the new key payload
-    # @return [void]
+    # @return [Key] self
     # @raise [Errno::ENOKEY] the key is invalid
     # @raise [Errno::EKEYEXPIRED] the key has expired
     # @raise [Errno::EKEYREVOKED] the key had been revoked
@@ -71,6 +73,7 @@ module Keyutils
           serial,
           payload && payload.to_s,
           payload && payload.length || 0
+      self
     end
 
     # Mark the key as being revoked.
@@ -80,13 +83,14 @@ module Keyutils
     #
     # The caller must have write permission on a key to be able revoke it.
     #
-    # @return [void]
+    # @return [Key] self
     # @raise [Errno::ENOKEY] the key does not exist
     # @raise [Errno::EKEYREVOKED] the key has already been revoked
     # @raise [Errno::EACCES] the key exists, but is not writable by the
     #   calling process
     def revoke
       Lib.keyctl_revoke serial
+      self
     end
 
     # Change the user and group ownership details of the key.
@@ -103,7 +107,7 @@ module Keyutils
     #
     # @param uid [Fixnum, nil] numeric UID of the new owner
     # @param gid [Fixnum, nil] numeric GID of the new owning group
-    # @return [void]
+    # @return [Key] self
     # @raise [Errno::ENOKEY] the key does not exist
     # @raise [Errno::EKEYEXPIRED] the key has expired
     # @raise [Errno::EKEYREVOKED] the key has been revoked
@@ -111,8 +115,69 @@ module Keyutils
     #   that UID out of quota
     # @raise [Errno::EACCES] the key exists, but does not grant setattr
     #   permission to the calling process; or insufficient process permissions
+    # @see #setperm
     def chown uid = nil, gid = nil
       Lib.keyctl_chown serial, uid || -1, gid || -1
+      self
+    end
+
+    # Change the permissions mask on the key.
+    #
+    # A process that does not have the _SysAdmin_ capability may not change the
+    # permissions mask on a key that doesn't have the same UID as the caller.
+    #
+    # The caller must have _setattr_ permission on a key to be able change its
+    # permissions mask.
+    #
+    # The permissions mask is a bitwise-OR of the following flags:
+    # - +KEY_xxx_VIEW+
+    #   Grant permission to view the attributes of a key.
+    #
+    # - +KEY_xxx_READ+
+    #   Grant permission to read the payload of a key or to list a keyring.
+    # - +KEY_xxx_WRITE+
+    #   Grant permission to modify the payload of a key or to add or remove
+    #   links to/from a keyring.
+    # - +KEY_xxx_SEARCH+
+    #   Grant permission to find a key or to search a keyring.
+    # - +KEY_xxx_LINK+
+    #   Grant permission to make links to a key.
+    # - +KEY_xxx_SETATTR+
+    #   Grant permission to change the ownership and permissions attributes of
+    #   a key.
+    # - +KEY_xxx_ALL+
+    #   Grant all the above.
+    #
+    # The 'xxx' in the above should be replaced by one of:
+    # - +POS+ Grant the permission to a process that possesses the key (has it
+    #   attached searchably to one of the process's keyrings).
+    # - +USR+ Grant the permission to a process with the same UID as the key.
+    # - +GRP+ Grant the permission to a process with the same GID as the key,
+    #   or with a match for the key's GID amongst that process's Groups list.
+    # - +OTH+ Grant the permission to any other process.
+    #
+    # Examples include: {KEY_POS_VIEW}, {KEY_USR_READ}, {KEY_GRP_SEARCH} and
+    # {KEY_OTH_ALL}.
+    #
+    # User, group and other grants are exclusive: if a process qualifies in
+    # the 'user' category, it will not qualify in the 'groups' category; and
+    # if a process qualifies in either 'user' or 'groups' then it will not
+    # qualify in the 'other' category.
+    #
+    # Possessor grants are cumulative with the grants from the 'user',
+    # 'groups' and 'other' categories.
+    #
+    # @param permissions [Fixnum] permission mask; bitwise OR-ed constants from
+    #   {KeyPerm}
+    # @return [Key] self
+    # @raise [Errno::ENOKEY] the key does not exist
+    # @raise [Errno::EKEYEXPIRED] the key has expired
+    # @raise [Errno::EKEYREVOKED] the key has been revoked
+    # @raise [Errno::EACCES] the key exists, but does not grant setattr
+    #   permission to the calling process
+    def setperm permissions
+      Lib.keyctl_setperm serial, permissions
+      self
     end
 
     class << self

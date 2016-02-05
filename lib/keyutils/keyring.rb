@@ -3,7 +3,7 @@ require 'keyutils/key_types'
 
 module Keyutils
   class Keyring < Key
-    # Clears the contents of the keyring.
+    # Clear the contents of the keyring.
     #
     # The caller must have write permission on a keyring to be able clear it.
     # @return [Keyring] self
@@ -12,7 +12,60 @@ module Keyutils
     # @raise [Errno::EKEYREVOKED] the keyring had been revoked
     # @raise [Errno::EACCES] the keyring is not writable by the calling process
     def clear
-      Lib.keyctl_clear serial
+      Lib.keyctl_clear id
+      self
+    end
+
+    # Link a key to the keyring.
+    #
+    # Creates a link from this keyring to +key+, displacing any link to another
+    # key of the same type and description in this keyring if one exists.
+    #
+    # The caller must have write permission on a keyring to be able to create
+    # links in it.
+    #
+    # The caller must have link permission on a key to be able to create a
+    # link to it.
+    #
+    # @param key [Key] the key to link to this keyring
+    # @return [Keyring] self
+    # @raise [Errno::ENOKEY] the key or the keyring specified are invalid
+    # @raise [Errno::EKEYEXPIRED] the key or the keyring specified have expired
+    # @raise [Errno::EKEYREVOKED] the key or the keyring specified have been
+    #   revoked
+    # @raise [Errno::EACCES] the keyring exists, but is not writable by the
+    #   calling process
+    # @raise [Errno::ENOMEM] insufficient memory to expand the keyring
+    # @raise [Errno::EDQUOT] expanding the keyring would exceed the keyring
+    #   owner's quota
+    # @raise [Errno::EACCES] the key exists, but is not linkable by the
+    #   calling process
+    # @see #unlink
+    def link key
+      Lib.keyctl_link key.id, id
+      self
+    end
+
+    # Unlink a key from the keyring.
+    #
+    # Removes a link from this keyring to +key+ if it exists.
+    #
+    # The caller must have write permission on a keyring to be able to remove
+    # links in it.
+    # @param key [Key] the key to unlink from this keyring
+    # @return [Keyring] self
+    # @raise [Errno::ENOKEY] the key or the keyring specified are invalid
+    # @raise [Errno::EKEYEXPIRED] the key or the keyring specified have expired
+    # @raise [Errno::EKEYREVOKED] the key or the keyring specified have been
+    #   revoked
+    # @raise [Errno::EACCES] the keyring exists, but is not writable by the
+    #   calling process
+    # @see #link
+    def unlink key
+      Lib.keyctl_unlink key.id, id
+      self
+    rescue Errno::ENOENT
+      # there was no link
       self
     end
   end

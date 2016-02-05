@@ -70,7 +70,7 @@ module Keyutils
     #   operation on its keys
     def update payload
       Lib.keyctl_update \
-          serial,
+          id,
           payload && payload.to_s,
           payload && payload.length || 0
       self
@@ -89,7 +89,7 @@ module Keyutils
     # @raise [Errno::EACCES] the key exists, but is not writable by the
     #   calling process
     def revoke
-      Lib.keyctl_revoke serial
+      Lib.keyctl_revoke id
       self
     end
 
@@ -117,7 +117,7 @@ module Keyutils
     #   permission to the calling process; or insufficient process permissions
     # @see #setperm
     def chown uid = nil, gid = nil
-      Lib.keyctl_chown serial, uid || -1, gid || -1
+      Lib.keyctl_chown id, uid || -1, gid || -1
       self
     end
 
@@ -176,7 +176,7 @@ module Keyutils
     # @raise [Errno::EACCES] the key exists, but does not grant setattr
     #   permission to the calling process
     def setperm permissions
-      Lib.keyctl_setperm serial, permissions
+      Lib.keyctl_setperm id, permissions
       self
     end
 
@@ -235,10 +235,10 @@ module Keyutils
     # @raise [Errno::EACCES] the key is not viewable by the calling process
     def describe
       buf = FFI::MemoryPointer.new :char, 64
-      len = Lib.keyctl_describe serial, buf, buf.size
+      len = Lib.keyctl_describe id, buf, buf.size
       while len > buf.size
         buf = FFI::MemoryPointer.new :char, len
-        len = Lib.keyctl_describe serial, buf, buf.size
+        len = Lib.keyctl_describe id, buf, buf.size
       end
       type, uid, gid, perm, desc = buf.read_string(len - 1).split ';', 5
       {

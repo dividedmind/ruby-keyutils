@@ -236,10 +236,23 @@ module Keyutils
     }
 
     # extern long keyctl_link(key_serial_t id, key_serial_t ringid);
-    attach_function :keyctl_link, [:key_serial_t, :key_serial_t], :long
+    attach_function :keyctl_link, [:key_serial_t, :key_serial_t], :long_e, errors: {
+       ENOKEY => "The key or the keyring specified are invalid",
+       EKEYEXPIRED => "The key or the keyring specified have expired",
+       EKEYREVOKED => "The key or the keyring specified have been revoked",
+       EACCES => "The keyring exists, but is not writable by the calling process",
+       ENOMEM => "Insufficient memory to expand the keyrin",
+       EDQUOT => "Expanding the keyring would exceed the keyring owner's quota",
+       EACCES => "The key exists, but is not linkable by the calling process"
+    }
 
     # extern long keyctl_unlink(key_serial_t id, key_serial_t ringid);
-    attach_function :keyctl_unlink, [:key_serial_t, :key_serial_t], :long
+    attach_function :keyctl_unlink, [:key_serial_t, :key_serial_t], :long_e, errors: {
+      ENOKEY => "The key or the keyring specified are invalid",
+      EKEYEXPIRED => "The key or the keyring specified have expired",
+      EKEYREVOKED => "The key or the keyring specified have been revoked",
+      EACCES => "The keyring exists, but is not writable by the calling process",
+    }
 
     # extern long keyctl_search(key_serial_t ringid,
     # 			  const char *type,

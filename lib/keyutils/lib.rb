@@ -185,7 +185,12 @@ module Keyutils
     #
 
     # extern key_serial_t keyctl_get_keyring_ID(key_serial_t id, int create);
-    attach_function :keyctl_get_keyring_ID, [:key_serial_t, :bool], :key_serial_t
+    attach_function :keyctl_get_keyring_ID, [:key_serial_t, :bool], :key_serial_t, errors: {
+      ENOKEY => "No matching key was found",
+      ENOMEM => "Insufficient memory to create a key",
+      EDQUOT => "The key quota for this user would be exceeded by creating "\
+        "this key or linking it to the keyring"
+    }
 
     # extern key_serial_t keyctl_join_session_keyring(const char *name);
     attach_function :keyctl_join_session_keyring, [:string], :key_serial_t

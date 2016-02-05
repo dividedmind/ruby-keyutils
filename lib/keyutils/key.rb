@@ -1,5 +1,50 @@
 module Keyutils
   class Key
+    # Numeric identifier of the key this object points to.
+    #
+    # @return [Fixnum] key serial number or one of {Lib::KEY_SPEC}
+    # @see #serial
+    attr_accessor :id
+    alias to_i id
+
+    # Get the serial number of this key.
+    #
+    # For ordinary keys, {#serial} == {#id}, and this method always succeeds.
+    #
+    # For special key handles (such as {Keyring::Session}), this method
+    # will resolve the actual serial number of the key it points to.
+    #
+    # Note if this is a special key handle and the key(ring) is not already
+    # instantiated, calling this method will attempt to create it. For this
+    # reason it can fail if memory or quota is exhausted.
+    #
+    # @return [Fixnum] serial number of this key
+    # @raise [Errno::ENOKEY] no matching key was found
+    # @raise [Errno::ENOMEM] insufficient memory to create a key
+    # @raise [Errno::EDQUOT] the key quota for this user would be exceeded by
+    #   creating this key or linking it to the keyring
+    # @see #exists?
+    # @see #id
+    def serial
+      return id unless id < 0
+      Lib.keyctl_get_keyring_ID id, true
+    end
+
+    # Check if this key exists in the kernel.
+    #
+    # The key may not exist eg. if it has been removed by another process, or if
+    # this is a special keyring handle (such as {Keyring::Thread}) and the
+    # keyring has not been instantiated yet.
+    #
+    # @return [Boolean] true if the key exists
+    def exists?
+      Lib.keyctl_get_keyring_ID(id, false) && true
+    rescue Errno::EACCES
+      true
+    rescue Errno::ENOKEY
+      false
+    end
+
     class << self
       # Add a key to the kernel's key management facility.
       #
@@ -22,7 +67,7 @@ module Keyutils
       # key will be created and it will displace the link to the extant key
       # from the keyring.
       #
-      # @param type [String] key type
+      # @param type [Symbol] key type
       # @param description [String] key description
       # @param payload [#to_s, nil] payload
       # @param keyring [Keyring] destination keyring; a valid keyring to which
@@ -38,14 +83,14 @@ module Keyutils
       #   creating this key or linking it to the keyring
       # @raise [Errno::EACCES] the keyring wasn't available for modification by
       #   the user
-      def add type, description, payload, keyring
+      def add type, description, payload, keyring = Keyring::Thread
         serial = Lib.add_key \
-            type,
+            type.to_s,
             description,
             payload && payload.to_s,
             payload && payload.length || 0,
             keyring.to_i
-        new serial, type, description
+        new_dispatch serial, type.intern, description
       end
 
       # Request a key from the kernel's key management facility.
@@ -80,7 +125,7 @@ module Keyutils
       # If a key is created, no matter whether it's a valid key or a negative
       # key, it will displace any other key of the same type and description
       # from the destination keyring.
-      # @param type [String] key type
+      # @param type [Symbol] key type
       # @param description [String] key description
       # @param callout_info [String, nil] additional parameters for the
       #   request-key(8) facility
@@ -94,14 +139,27 @@ module Keyutils
       # @raise [Errno::EKEYREJECTED] the attempt to generate a new key was rejected
       # @raise [Errno::EKEYREVOKED] a revoked key was found, but no replacement could be obtained
       # @raise [Errno::ENOMEM] insufficient memory to create a key
-      def request type, description, callout_info, keyring
-        serial = Lib.request_key type, description, callout_info, keyring.to_i
-        new serial, type, description
+      def request type, description, callout_info = nil, keyring = Keyring::Thread
+        serial = Lib.request_key \
+            type.to_s,
+            description,
+            callout_info,
+            keyring.to_i
+        new_dispatch serial, type.intern, description
       rescue Errno::ENOKEY
         nil
       end
 
-      private :new
+      protected
+      protected :new
+
+      def new_dispatch id, type, description
+        if klass = KeyTypes[type]
+          klass.send :new, id, description
+        else
+          new id, type, description
+        end
+      end
     end
 
     private

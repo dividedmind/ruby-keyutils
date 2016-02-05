@@ -45,6 +45,36 @@ module Keyutils
       false
     end
 
+    # Update the key.
+    #
+    # Updates the payload of the key if the key type permits it.
+    #
+    # The caller must have write permission on the key to be able to update it.
+    #
+    # +payload+ specifies the data for the new payload; it may be nil
+    # if the key type permits that. The key type may reject the data if it's
+    # in the wrong format or in some other way invalid.
+    #
+    # @param payload [#to_s, nil] data for the new key payload
+    # @return [void]
+    # @raise [Errno::ENOKEY] the key is invalid
+    # @raise [Errno::EKEYEXPIRED] the key has expired
+    # @raise [Errno::EKEYREVOKED] the key had been revoked
+    # @raise [Errno::EINVAL] the payload data was invalid
+    # @raise [Errno::ENOMEM] insufficient memory to store the new payload
+    # @raise [Errno::EDQUOT] the key quota for this user would be exceeded by
+    #   increasing the size of the key to accommodate the new payload
+    # @raise [Errno::EACCES] the key exists, but is not writable by the
+    #   calling process
+    # @raise [Errno::EOPNOTSUPP] the key type does not support the update
+    #   operation on its keys
+    def update payload
+      Lib.keyctl_update \
+          id,
+          payload && payload.to_s,
+          payload && payload.length || 0
+    end
+
     class << self
       # Add a key to the kernel's key management facility.
       #

@@ -201,8 +201,31 @@ module Keyutils
         "calling process"
     }
 
+    module NonnegativeOrErrorLongConverter
+      extend FFI::DataConverter
+      native_type FFI::Type::LONG
+
+      def self.from_native val, ctx
+        fail SystemCallError, FFI.errno, caller if val == -1
+        super
+      end
+    end
+
     # extern long keyctl_update(key_serial_t id, const void *payload, size_t plen);
-    attach_function :keyctl_update, [:key_serial_t, :pointer, :size_t], :long
+    attach_function \
+        :keyctl_update,
+        [:key_serial_t, :pointer, :size_t],
+        NonnegativeOrErrorLongConverter,
+        errors: {
+          ENOKEY => "The key specified is invalid",
+          EKEYEXPIRED => "The key specified has expired",
+          EKEYREVOKED => "The key specified had been revoked",
+          EINVAL => "The payload data was invalid",
+          ENOMEM => "Insufficient memory to store the new payload",
+          EDQUOT => "The key quota for this user would be exceeded by increasing the size of the key to accommodate the new payload",
+          EACCES => "The key exists, but is not writable by the calling process",
+          EOPNOTSUPP => "The key type does not support the update operation on its keys",
+        }
 
     # extern long keyctl_revoke(key_serial_t id);
     attach_function :keyctl_revoke, [:key_serial_t], :long

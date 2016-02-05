@@ -220,7 +220,12 @@ module Keyutils
     }
 
     # extern long keyctl_describe(key_serial_t id, char *buffer, size_t buflen);
-    attach_function :keyctl_describe, [:key_serial_t, :pointer, :size_t], :long
+    attach_function :keyctl_describe, [:key_serial_t, :pointer, :size_t], :long_e, errors: {
+      ENOKEY => "The key specified is invalid",
+      EKEYEXPIRED => "The key specified has expired",
+      EKEYREVOKED => "The key specified had been revoked",
+      EACCES => "The key exists, but is not viewable by the calling process"
+    }
 
     # extern long keyctl_clear(key_serial_t ringid);
     attach_function :keyctl_clear, [:key_serial_t], :long

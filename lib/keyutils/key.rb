@@ -180,6 +180,76 @@ module Keyutils
       self
     end
 
+    # @return [Symbol] the key type name
+    def type
+      @type ||= describe[:type]
+    end
+
+    # @return [String] the key description
+    def description
+      @description ||= describe[:desc]
+    end
+
+    # @return [Fixnum] the key UID
+    # @see #gid
+    # @see #describe
+    def uid
+      describe[:uid]
+    end
+
+    # @return [Fixnum] the key GID
+    # @see #uid
+    # @see #describe
+    def gid
+      describe[:gid]
+    end
+
+    # @return [Fixnum] the key permission mask
+    # @see #setperm
+    # @see #describe
+    def perm
+      describe[:perm]
+    end
+
+    # Describe the attributes of the key.
+    #
+    # The caller must have view permission on a key to be able to get a
+    # description of it.
+    #
+    # Description is returned as a hash of the following keys:
+    # - +:type+ [Symbol],
+    # - +:uid+ [Fixnum],
+    # - +:gid+ [Fixnum],
+    # - +:perm+ [Fixnum],
+    # - +:desc+ [String].
+    #
+    # @return [Hash] key description
+    # @see #type
+    # @see #uid
+    # @see #gid
+    # @see #perm
+    # @see #description
+    # @raise [Errno::ENOKEY] the key is invalid
+    # @raise [Errno::EKEYEXPIRED] the key has expired
+    # @raise [Errno::EKEYREVOKED] the key had been revoked
+    # @raise [Errno::EACCES] the key is not viewable by the calling process
+    def describe
+      buf = FFI::MemoryPointer.new :char, 64
+      len = Lib.keyctl_describe serial, buf, buf.size
+      while len > buf.size
+        buf = FFI::MemoryPointer.new :char, len
+        len = Lib.keyctl_describe serial, buf, buf.size
+      end
+      type, uid, gid, perm, desc = buf.read_string(len - 1).split ';', 5
+      {
+        type: @type = type.intern,
+        uid: uid.to_i,
+        gid: gid.to_i,
+        perm: perm.to_i(16),
+        desc: @description = desc
+      }
+    end
+
     class << self
       # Add a key to the kernel's key management facility.
       #

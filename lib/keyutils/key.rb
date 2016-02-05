@@ -70,9 +70,27 @@ module Keyutils
     #   operation on its keys
     def update payload
       Lib.keyctl_update \
-          id,
+          serial,
           payload && payload.to_s,
           payload && payload.length || 0
+    end
+
+    # Revoke the key.
+    #
+    # Marks the key as being revoked.
+    #
+    # After this operation has been performed on a key, attempts to access it
+    # will meet with error EKEYREVOKED.
+    #
+    # The caller must have write permission on a key to be able revoke it.
+    #
+    # @return [void]
+    # @raise [Errno::ENOKEY] the key does not exist
+    # @raise [Errno::EKEYREVOKED] the key has already been revoked
+    # @raise [Errno::EACCES] the key exists, but is not writable by the
+    #   calling process
+    def revoke
+      Lib.keyctl_revoke serial
     end
 
     class << self

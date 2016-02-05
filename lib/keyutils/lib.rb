@@ -228,7 +228,12 @@ module Keyutils
     }
 
     # extern long keyctl_clear(key_serial_t ringid);
-    attach_function :keyctl_clear, [:key_serial_t], :long
+    attach_function :keyctl_clear, [:key_serial_t], :long_e, errors: {
+      ENOKEY => "The keyring specified is invalid",
+      EKEYEXPIRED => "The keyring specified has expired",
+      EKEYREVOKED => "The keyring specified had been revoked",
+      EACCES => "The keyring exists, but is not writable by the calling process",
+    }
 
     # extern long keyctl_link(key_serial_t id, key_serial_t ringid);
     attach_function :keyctl_link, [:key_serial_t, :key_serial_t], :long

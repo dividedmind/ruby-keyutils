@@ -3,6 +3,18 @@ require 'keyutils/key_types'
 
 module Keyutils
   class Keyring < Key
+    # Clears the contents of the keyring.
+    #
+    # The caller must have write permission on a keyring to be able clear it.
+    # @return [Keyring] self
+    # @raise [Errno::ENOKEY] the keyring is invalid
+    # @raise [Errno::EKEYEXPIRED] the keyring has expired
+    # @raise [Errno::EKEYREVOKED] the keyring had been revoked
+    # @raise [Errno::EACCES] the keyring is not writable by the calling process
+    def clear
+      Lib.keyctl_clear serial
+      self
+    end
   end
 
   # This module contains the additional methods included in {Keyutils::Keyring::Session}.

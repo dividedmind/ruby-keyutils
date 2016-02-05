@@ -46,6 +46,8 @@ module Keyutils
       self
     end
 
+    alias << link
+
     # Unlink a key from the keyring.
     #
     # Removes a link from this keyring to +key+ if it exists.
@@ -67,6 +69,50 @@ module Keyutils
     rescue Errno::ENOENT
       # there was no link
       self
+    end
+
+    # Search the keyring for a key
+    #
+    # Recursively searches the keyring for a key of the specified +type+ and
+    # +description+.
+    #
+    # If found, the key will be attached to the +destination+ keyring (if
+    # given), and returned.
+    #
+    # The source keyring must grant search permission to the caller, and for a
+    # key to be found, it must also grant search permission to the caller.
+    # Child keyrings will be only be recursively searched if they grant search
+    # permission to the caller as well.
+    #
+    # If the +destination+ keyring is given, then the link may only be formed
+    # if the found key grants the caller link permission and the destination
+    # keyring grants the caller write permission.
+    #
+    # If the search is successful, and if the destination keyring already
+    # contains a link to a key that matches the specified type and description,
+    # then that link will be replaced by a link to the found key.
+    #
+    # @param type [Symbol] the type of the key to find
+    # @param description [String] the description of the key to find
+    # @param destination [Keyring, nil] the keyring to attach the key if found
+    # @return [Key, nil] the key, if found
+    # @raise [Errno::EKEYEXPIRED] one of the keyrings has expired, or the only
+    #   key found was expired
+    # @raise [Errno::EKEYREVOKED] one of the keyrings has been revoked, or the
+    #   only key found was revoked
+    # @raise [Errno::ENOMEM] insufficient memory to expand the destination
+    #   keyring
+    # @raise [Errno::EDQUOT] the key quota for this user would be exceeded by
+    #   creating a link to the found key in the destination keyring
+    # @raise [Errno::EACCES] the source keyring didn't grant search permission,
+    #   the destination keyring didn't grant write permission or the found key
+    #   didn't grant link permission to the caller
+    # @see Key.request
+    def search type, description, destination = nil
+      serial = Lib.keyctl_search id, type.to_s, description, destination.to_i
+      Key.send :new_dispatch, serial, type.intern, description
+    rescue Errno::ENOKEY
+      nil
     end
   end
 

@@ -258,7 +258,21 @@ module Keyutils
     # 			  const char *type,
     # 			  const char *description,
     # 			  key_serial_t destringid);
-    attach_function :keyctl_search, [:key_serial_t, :string, :string, :key_serial_t], :long
+    attach_function :keyctl_search, [:key_serial_t, :string, :string, :key_serial_t], :long_e, errors: {
+      ENOKEY => "One of the keyrings doesn't exist, no key was found by the "\
+        "search, or the only key found by the search was a negative key",
+      ENOTDIR => "One of the keyrings is a valid key that isn't a keyring",
+      EKEYEXPIRED => "One of the keyrings has expired, or the only key found "\
+        "was expired",
+      EKEYREVOKED => "One of the keyrings has been revoked, or the only key "\
+        "found was revoked",
+      ENOMEM => "Insufficient memory to expand the destination keyring",
+      EDQUOT => "The key quota for this user would be exceeded by creating a "\
+        "link to the found key in the destination keyring",
+      EACCES => "The source keyring didn't grant search permission, the "\
+        "destination keyring didn't grant write permission or the found key "\
+        "didn't grant link permission to the caller"
+    }
 
     # extern long keyctl_read(key_serial_t id, char *buffer, size_t buflen);
     attach_function :keyctl_read, [:key_serial_t, :pointer, :size_t], :long

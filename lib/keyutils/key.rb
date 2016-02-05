@@ -116,6 +116,8 @@ module Keyutils
     # @raise [Errno::EACCES] the key exists, but does not grant setattr
     #   permission to the calling process; or insufficient process permissions
     # @see #setperm
+    # @see #uid
+    # @see #gid
     def chown uid = nil, gid = nil
       Lib.keyctl_chown id, uid || -1, gid || -1
       self
@@ -193,6 +195,7 @@ module Keyutils
     # @return [Fixnum] the key UID
     # @see #gid
     # @see #describe
+    # @see #chown
     def uid
       describe[:uid]
     end
@@ -200,6 +203,7 @@ module Keyutils
     # @return [Fixnum] the key GID
     # @see #uid
     # @see #describe
+    # @see #chown
     def gid
       describe[:gid]
     end
@@ -344,6 +348,7 @@ module Keyutils
       # @raise [Errno::EKEYREJECTED] the attempt to generate a new key was rejected
       # @raise [Errno::EKEYREVOKED] a revoked key was found, but no replacement could be obtained
       # @raise [Errno::ENOMEM] insufficient memory to create a key
+      # @see Keyring#search
       def request type, description, callout_info = '', keyring = Keyring::Thread
         serial = Lib.request_key \
             type.to_s,

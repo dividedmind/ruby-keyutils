@@ -330,7 +330,12 @@ module Keyutils
     }
 
     # extern long keyctl_assume_authority(key_serial_t key);
-    attach_function :keyctl_assume_authority, [:key_serial_t], :long
+    attach_function :keyctl_assume_authority, [:key_serial_t], :long_e, errors: {
+      ENOKEY => "The key specified is invalid",
+      EKEYEXPIRED => "The key specified has expired",
+      EKEYREVOKED => "The key specified had been revoked, or the "\
+        "authorisation has been revoked"
+    }
 
     # extern long keyctl_get_security(key_serial_t key, char *buffer, size_t buflen);
     attach_function :keyctl_get_security, [:key_serial_t, :pointer, :size_t], :long

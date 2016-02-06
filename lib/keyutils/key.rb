@@ -318,6 +318,7 @@ module Keyutils
     # @raise [Errno::EACCES] the key exists, but is not writable by the
     #   requester
     # @see #negate
+    # @see #assume_authority
     def instantiate payload, destination = nil
       Lib.keyctl_instantiate id,
           payload && payload.to_s,
@@ -388,6 +389,47 @@ module Keyutils
     #   the calling process.
     def set_timeout timeout_s
       Lib.keyctl_set_timeout id, timeout_s
+      self
+    end
+
+    # Assume the authority to instantiate the key.
+    #
+    # Assumes the authority for the calling thread to deal with and
+    # instantiate this uninstantiated key.
+    #
+    # The calling thread must have the appropriate authorisation key resident
+    # in one of its keyrings for this to succeed, and that authority must not
+    # have been revoked.
+    #
+    # The authorising key is allocated by
+    # {http://man7.org/linux/man-pages/man2/request_key.2.html request_key(2)}
+    # when it needs to invoke userspace to generate a key for the requesting
+    # process. This is then attached to one of the keyrings of the userspace
+    # process to which the task of instantiating the key is given:
+    #
+    # requester ⟶ request_key() ⟶ instantiator
+    #
+    # Calling this function modifies the way {.request} works when called
+    # thereafter by the calling (instantiator) thread; once the authority is
+    # assumed, the keyrings of the initial process are added to the search
+    # path, using the initial process's UID, GID, groups and security context.
+    #
+    # If a thread has multiple instantiations to deal with, it may call this
+    # function to change the authorisation key currently in effect.
+    #
+    # @note This is a per-thread setting and not a per-process setting so that
+    #   a multithreaded process can be used to instantiate several keys at
+    #   once.
+    #
+    # @return (Key) self
+    # @see #instantiate
+    # @see .request
+    # @raise [Errno::ENOKEY] the key is invalid.
+    # @raise [Errno::EKEYREVOKED] the key had been revoked, or the
+    #   authorisation has been revoked.
+    # @see .renounce_authority
+    def assume_authority
+      Lib.keyctl_assume_authority id
       self
     end
 
@@ -486,6 +528,8 @@ module Keyutils
       # @raise [Errno::EKEYREVOKED] a revoked key was found, but no replacement could be obtained
       # @raise [Errno::ENOMEM] insufficient memory to create a key
       # @see Keyring#search
+      # @see http://man7.org/linux/man-pages/man2/request_key.2.html request_key(2)
+      # @see #assume_authority
       def request type, description, callout_info = '', keyring = Keyring::Thread
         serial = Lib.request_key \
             type.to_s,
@@ -495,6 +539,13 @@ module Keyutils
         new_dispatch serial, type.intern, description
       rescue Errno::ENOKEY
         nil
+      end
+
+      # De-assume the currently assumed authority.
+      # @see #assume_authority
+      # @return [void]
+      def renounce_authority
+        Lib.keyctl_assume_authority 0
       end
 
       protected

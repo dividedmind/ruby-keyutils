@@ -426,6 +426,9 @@ module Keyutils
     # Marks a key as negatively instantiated and sets the expiration timer on
     # it. Attempts to access the key will raise the given +error+.
     #
+    # @note On some kernel versions +error+ setting is not supported. In this
+    #   case it will fall back to always raising {Errno::ENOKEY}.
+    #
     # Only a key for which authority has been assumed may be negatively
     # instantiated, and once instantiated, the authorisation key
     # will be revoked and the requesting process will be able to resume.

@@ -383,7 +383,19 @@ module Keyutils
     }
 
     # extern long keyctl_get_persistent(uid_t uid, key_serial_t id);
-    attach_function :keyctl_get_persistent, [:uid_t, :key_serial_t], :long
+    attach_function :keyctl_get_persistent, [:uid_t, :key_serial_t], :long_e, errors: {
+      EPERM => "Not permitted to access the persistent keyring for the "\
+        "requested UID",
+      ENOMEM => "Insufficient memory to create the persistent keyring or to "\
+        "extend destination keyring",
+      ENOKEY => "The destination keyring does not exist",
+      EKEYEXPIRED => "The destination keyring has expired",
+      EKEYREVOKED => "The destination keyring has been revoked",
+      EDQUOT => "The user does not have sufficient quota to extend the "\
+        "destination keyring",
+      EACCES => "The destination keyring exists, but does not grant write "\
+        "permission to the calling process",
+    }
 
     #
     # utilities

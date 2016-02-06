@@ -199,6 +199,56 @@ module Keyutils
         [nil, Thread, Process, Session, User, UserSession, Group]\
             [Lib.keyctl_set_reqkey_keyring -1]
       end
+
+      # Get the persistent keyring for a user.
+      #
+      # @note Not every system supports persistent keyrings.
+      #
+      # Unlike the session and user keyrings, this keyring will persist once
+      # all login sessions have been deleted and can thus be used to carry
+      # authentication tokens for processes that run without user interaction,
+      # such as programs started by cron.
+      #
+      # The persistent keyring will be created by the kernel if it does not
+      # yet exist. Each time this function is called, the persistent keyring
+      # will have its expiration timeout reset to the value in
+      # +/proc/sys/kernel/keys/persistent_keyring_expiry+ (by default three
+      # days). Should the timeout be reached, the persistent keyring will be
+      # removed and everything it pins can then be garbage collected.
+      #
+      # If UID is nil then the calling process's real user ID will be used. If
+      # UID is not nil then {Errno::EPERM} will be raised if the user ID
+      # requested does not match either the caller's real or effective user
+      # IDs or if the calling process does not have _SetUid_ capability.
+      #
+      # If successful, a link to the persistent keyring will be added into
+      # +destination+.
+      #
+      # @param uid [Fixnum, nil] UID of the user for which the persistent
+      #   keyring is requested
+      # @param destination [Keyring, nil] keyring to add the persistent keyring
+      #   to
+      # @return [Keyring] the persistent keyring
+      # @raise [Errno::EPERM] not permitted to access the persistent keyring
+      #   for the requested UID.
+      # @raise [Errno::ENOMEM] insufficient memory to create the persistent
+      #   keyring or to extend +destination+.
+      # @raise [Errno::ENOKEY] +destination+ does not exist.
+      # @raise [Errno::EKEYEXPIRED] +destination+ has expired.
+      # @raise [Errno::EKEYREVOKED] +destination+ has been revoked.
+      # @raise [Errno::EDQUOT] the user does not have sufficient quota to
+      #   extend +destination+.
+      # @raise [Errno::EACCES] +destination+ exists, but does not grant write
+      #   permission to the calling process.
+      # @raise [Errno::EOPNOTSUPP] persistent keyrings are not supported by this
+      #   system
+      def persistent uid = nil, destination = nil
+        Keyring.send \
+            :new,
+            Lib.keyctl_get_persistent(uid || -1, destination.to_i),
+            nil,
+            nil
+      end
     end
   end
 

@@ -355,7 +355,17 @@ module Keyutils
 
     # extern long keyctl_reject(key_serial_t id, unsigned timeout, unsigned error,
     # 			  key_serial_t ringid);
-    attach_function :keyctl_reject, [:key_serial_t, :uint, :uint, :key_serial_t], :long
+    attach_function :keyctl_reject, [:key_serial_t, :uint, :uint, :key_serial_t], :long_e, errors: {
+      ENOKEY => "The key or keyring specified is invalid",
+      EKEYEXPIRED => "The keyring specified has expired",
+      EKEYREVOKED => "The key or keyring specified had been revoked, or the "\
+        "authorisation has been revoked",
+      EDQUOT => "The  key quota for the key's user would be exceeded by "\
+        "increasing the size of the key to accommodate the new payload or the "\
+        "key quota for the keyring's user would be exceeded by expanding the "\
+        "destination keyring",
+      EACCES => "The key exists, but is not writable by the requester"
+    }
 
     # struct iovec;
     # extern long keyctl_instantiate_iov(key_serial_t id,

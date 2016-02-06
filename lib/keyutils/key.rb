@@ -177,6 +177,7 @@ module Keyutils
     # @raise [Errno::EKEYREVOKED] the key has been revoked
     # @raise [Errno::EACCES] the key exists, but does not grant setattr
     #   permission to the calling process
+    # @see #perm
     def setperm permissions
       Lib.keyctl_setperm id, permissions
       self
@@ -217,7 +218,7 @@ module Keyutils
 
     # Describe the attributes of the key.
     #
-    # The caller must have view permission on a key to be able to get a
+    # The caller must have view permission on a key to be able to get
     # attributes of it.
     #
     # Attributes are returned as a hash of the following keys:
@@ -317,54 +318,13 @@ module Keyutils
     #   expanding the destination keyring
     # @raise [Errno::EACCES] the key exists, but is not writable by the
     #   requester
-    # @see #negate
+    # @see #reject
     # @see #assume_authority
     def instantiate payload, destination = nil
       Lib.keyctl_instantiate id,
           payload && payload.to_s,
           payload && payload.to_s.length || 0,
           destination.to_i
-      self
-    end
-
-    # Negatively instantiate a key
-    #
-    # Marks a key as negatively instantiated and sets the expiration timer on
-    # it. Attempts to access the key will raise an {Errno::ENOKEY} error.
-    #
-    # Only a key for which authority has been assumed may be negatively
-    # instantiated, and once instantiated, the authorisation key
-    # will be revoked and the requesting process will be able to resume.
-    #
-    # The +destination+ keyring, if given, is assumed to belong to the initial
-    # requester, and not the instantiating process. Therefore, the special
-    # keyring objects (such as {Keyring::Session}) refer to the requesting
-    # process's keyrings, not the caller's, and the requester's UID, etc. will
-    # be used to access them.
-    #
-    # The +destination+ keyring can be nil if no extra link is desired.
-    #
-    # The requester, not the caller, must have write permission on the
-    # +destination+ for a link to be made there.
-    #
-    # @param timeout_s [Fixnum] the lifetime of the key in seconds
-    # @param destination [Keyring, nil] keyring to link the key to
-    # @return [Key] self
-    # @raise [Errno::ENOKEY] the key or specified keyring is invalid
-    # @raise [Errno::EKEYEXPIRED] the keyring specified has expired
-    # @raise [Errno::EKEYREVOKED] the key or keyring specified had been
-    #   revoked, or the authorisation has been revoked
-    # @raise [Errno::ENOMEM] insufficient memory to store the new payload or
-    #   to expand the destination keyring
-    # @raise [Errno::EDQUOT] the key quota for the key's user would be
-    #   exceeded by increasing the size of the key to accommodate the new
-    #   payload or the key quota for the keyring's user would be exceeded by
-    #   expanding the destination keyring
-    # @raise [Errno::EACCES] the key exists, but is not writable by the
-    #   requester
-    # @see #instantiate
-    def negate timeout_s, destination = nil
-      Lib.keyctl_negate id, timeout_s, destination.to_i
       self
     end
 
@@ -458,6 +418,48 @@ module Keyutils
         len = Lib.keyctl_get_security id, buf, buf.size
       end
       @security = buf.read_string (len - 1)
+    end
+
+    # Negatively instantiate a key
+    #
+    # Marks a key as negatively instantiated and sets the expiration timer on
+    # it. Attempts to access the key will raise the given +error+.
+    #
+    # Only a key for which authority has been assumed may be negatively
+    # instantiated, and once instantiated, the authorisation key
+    # will be revoked and the requesting process will be able to resume.
+    #
+    # The +destination+ keyring, if given, is assumed to belong to the initial
+    # requester, and not the instantiating process. Therefore, the special
+    # keyring objects (such as {Keyring::Session}) refer to the requesting
+    # process's keyrings, not the caller's, and the requester's UID, etc. will
+    # be used to access them.
+    #
+    # The +destination+ keyring can be nil if no extra link is desired.
+    #
+    # The requester, not the caller, must have write permission on the
+    # +destination+ for a link to be made there.
+    #
+    # @param timeout_s [Fixnum] the lifetime of the key in seconds
+    # @param error [::Errno] error to be raised when attempting to
+    #   access the key, typically one of {Errno::ENOKEY},
+    #   {Errno::EKEYREJECTED}, {Errno::EKEYREVOKED} or {Errno::EKEYEXPIRED}
+    # @param destination [Keyring, nil] keyring to link the key to
+    # @return [Key] self
+    # @raise [Errno::ENOKEY] the key or specified keyring is invalid
+    # @raise [Errno::EKEYEXPIRED] the keyring specified has expired
+    # @raise [Errno::EKEYREVOKED] the key or keyring specified had been
+    #   revoked, or the authorisation has been revoked
+    # @raise [Errno::ENOMEM] insufficient memory to expand the destination
+    #   keyring
+    # @raise [Errno::EDQUOT] the key quota for the keyring's user would be
+    #   exceeded by expanding the destination keyring
+    # @raise [Errno::EACCES] the keyring exists, but is not writable by the
+    #   requester
+    # @see #instantiate
+    def reject timeout_s, error = Errno::ENOKEY, destination = nil
+      Lib.keyctl_reject id, timeout_s, error::Errno, keyring.to_i
+      self
     end
 
     class << self

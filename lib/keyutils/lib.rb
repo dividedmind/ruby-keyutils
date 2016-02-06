@@ -372,10 +372,15 @@ module Keyutils
     # 				   const struct iovec *payload_iov,
     # 				   unsigned ioc,
     # 				   key_serial_t ringid);
-    attach_function :keyctl_instantiate_iov, [:key_serial_t, :pointer, :uint, :key_serial_t], :long
+    attach_function :keyctl_instantiate_iov, [:key_serial_t, :pointer, :uint, :key_serial_t], :long_e
 
     # extern long keyctl_invalidate(key_serial_t id);
-    attach_function :keyctl_invalidate, [:key_serial_t], :long
+    attach_function :keyctl_invalidate, [:key_serial_t], :long_e, errors: {
+      ENOKEY => "The key specified is invalid",
+      EKEYEXPIRED => "The key specified has expired",
+      EKEYREVOKED => "The key specified had been revoked",
+      EACCES => "The key exists, but is not searchable by the calling process"
+    }
 
     # extern long keyctl_get_persistent(uid_t uid, key_serial_t id);
     attach_function :keyctl_get_persistent, [:uid_t, :key_serial_t], :long

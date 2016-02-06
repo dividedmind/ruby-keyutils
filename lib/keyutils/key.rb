@@ -88,6 +88,7 @@ module Keyutils
     # @raise [Errno::EKEYREVOKED] the key has already been revoked
     # @raise [Errno::EACCES] the key exists, but is not writable by the
     #   calling process
+    # @see #invalidate
     def revoke
       Lib.keyctl_revoke id
       self
@@ -459,6 +460,26 @@ module Keyutils
     # @see #instantiate
     def reject timeout_s, error = Errno::ENOKEY, destination = nil
       Lib.keyctl_reject id, timeout_s, error::Errno, keyring.to_i
+      self
+    end
+
+    # Invalidate the key.
+    #
+    # The key is scheduled for immediate removal from all the keyrings that
+    # point to it, after which it will be deleted. The key will be ignored by
+    # all searches once this function is called even if it is not yet fully
+    # dealt with.
+    #
+    # The caller must have _search_ permission on a key to be able to
+    # invalidate it.
+    # @raise [Errno::ENOKEY] the key is invalid.
+    # @raise [Errno::EKEYEXPIRED] the key specified has expired.
+    # @raise [Errno::EKEYREVOKED] the key specified had been revoked.
+    # @raise [Errno::EACCES] the key is not searchable by the calling process.
+    # @return [Key] self
+    # @see #revoke
+    def invalidate
+      Lib.keyctl_invalidate id
       self
     end
 

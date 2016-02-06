@@ -136,6 +136,70 @@ module Keyutils
     end
     alias to_a read
     undef to_s
+
+    class << self
+      # Set the implicit destination keyring
+      #
+      # Sets the default destination for implicit key requests for the current
+      # thread.
+      #
+      # After this operation has been issued, keys acquired by implicit key
+      # requests, such as might be performed by open() on an AFS or NFS
+      # filesystem, will be linked by default to the specified keyring by this
+      # function.
+      #
+      # Only one of the special keyrings can be set as default:
+      # - {Thread}
+      # - {Process}
+      # - {Session}
+      # - {User}
+      # - {UserSession}
+      # - {Group}
+      #
+      # If +keyring+ is nil, the default behaviour is selected, which is to
+      # use the thread-specific keyring if there is one, otherwise the
+      # process-specific keyring if there is one, otherwise the session
+      # keyring if there is one, otherwise the UID-specific session keyring.
+      #
+      # @param keyring [Keyring, nil] the new default keyring
+      # @return [Keyring, nil] +keyring+
+      # @see .default
+      def default= keyring = nil
+        id = keyring.to_i
+        raise ArgumentError, 'only special keyrings can be default' \
+            if id > 0
+        Lib.keyctl_set_reqkey_keyring -id
+      end
+
+      # Get the implicit destination keyring
+      #
+      # Gets the default destination for implicit key requests for the current
+      # thread.
+      #
+      # Keys acquired by implicit key requests, such as might be performed
+      # by open() on an AFS or NFS filesystem, will be linked by default to
+      # that keyring.
+      #
+      # Only one of the special keyrings can be returned:
+      # - {Thread}
+      # - {Process}
+      # - {Session}
+      # - {User}
+      # - {UserSession}
+      # - {Group}
+      #
+      # If nil is returned, the default behaviour is selected, which is to
+      # use the thread-specific keyring if there is one, otherwise the
+      # process-specific keyring if there is one, otherwise the session
+      # keyring if there is one, otherwise the UID-specific session keyring.
+      #
+      # @return [Keyring, nil] the default keyring
+      # @see .default=
+      def default
+        [nil, Thread, Process, Session, User, UserSession, Group]\
+            [Lib.keyctl_set_reqkey_keyring -1]
+      end
+    end
   end
 
   # This module contains the additional methods included in {Keyutils::Keyring::Session}.

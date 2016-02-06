@@ -287,7 +287,7 @@ module Keyutils
     # 			       const void *payload,
     # 			       size_t plen,
     # 			       key_serial_t ringid);
-    attach_function :keyctl_instantiate, [:key_serial_t, :pointer, :size_t, :key_serial_t], :long_e, :errors: {
+    attach_function :keyctl_instantiate, [:key_serial_t, :pointer, :size_t, :key_serial_t], :long_e, errors: {
       ENOKEY => "The key or keyring specified is invalid",
       EKEYEXPIRED => "The keyring specified has expired",
       EKEYREVOKED => "The key or keyring specified had been revoked, or the "\
@@ -316,7 +316,9 @@ module Keyutils
     }
 
     # extern long keyctl_set_reqkey_keyring(int reqkey_defl);
-    attach_function :keyctl_set_reqkey_keyring, [:int], :long
+    attach_function :keyctl_set_reqkey_keyring, [:int], :long_e, errors: {
+      EINVAL => "The value of reqkey_defl is invalid",
+    }
 
     # extern long keyctl_set_timeout(key_serial_t key, unsigned timeout);
     attach_function :keyctl_set_timeout, [:key_serial_t, :uint], :long

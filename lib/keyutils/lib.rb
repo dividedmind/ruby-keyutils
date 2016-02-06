@@ -338,7 +338,12 @@ module Keyutils
     }
 
     # extern long keyctl_get_security(key_serial_t key, char *buffer, size_t buflen);
-    attach_function :keyctl_get_security, [:key_serial_t, :pointer, :size_t], :long
+    attach_function :keyctl_get_security, [:key_serial_t, :pointer, :size_t], :long_e, errors: {
+      ENOKEY => "The key specified is invalid",
+      EKEYEXPIRED => "The key specified has expired",
+      EKEYREVOKED => "The key specified had been revoked",
+      EACCES => "The key exists, but is not viewable by the calling process",
+    }
 
     # extern long keyctl_session_to_parent(void);
     attach_function :keyctl_session_to_parent, [], :long

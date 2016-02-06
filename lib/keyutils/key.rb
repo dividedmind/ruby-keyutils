@@ -433,6 +433,33 @@ module Keyutils
       self
     end
 
+    # Retrieve the key's security context.
+    #
+    # This will be rendered in a form appropriate to the LSM in force---for
+    # instance, with SELinux, it may look like
+    #
+    #   unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023
+    #
+    # The caller must have view permission on a key to be able to get its
+    # security context.
+    #
+    # @return [String] key security context
+    # @raise [Errno::ENOKEY] the key is invalid.
+    # @raise [Errno::EKEYEXPIRED] the key has expired.
+    # @raise [Errno::EKEYREVOKED] the key had been revoked.
+    # @raise [Errno::EACCES] the key is not viewable by the calling process.
+    def security
+      return @security if @security
+
+      buf = FFI::MemoryPointer.new :char, 64
+      len = Lib.keyctl_get_security id, buf, buf.size
+      while len > buf.size
+        buf = FFI::MemoryPointer.new :char, len
+        len = Lib.keyctl_get_security id, buf, buf.size
+      end
+      @security = buf.read_string (len - 1)
+    end
+
     class << self
       # Add a key to the kernel's key management facility.
       #

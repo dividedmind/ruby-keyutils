@@ -346,7 +346,12 @@ module Keyutils
     }
 
     # extern long keyctl_session_to_parent(void);
-    attach_function :keyctl_session_to_parent, [], :long
+    attach_function :keyctl_session_to_parent, [], :long_e, errors: {
+      ENOMEM => "Insufficient memory to create a key",
+      EPERM => "The credentials of the parent don't match those of the caller",
+      EACCES => "The named keyring exists, but is not linkable by the "\
+        "calling process",
+    }
 
     # extern long keyctl_reject(key_serial_t id, unsigned timeout, unsigned error,
     # 			  key_serial_t ringid);

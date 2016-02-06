@@ -228,6 +228,31 @@ module Keyutils
     def join name = nil
       Keyring.send :new, Lib.keyctl_join_session_keyring(name), name
     end
+
+    # Set the parent process's session keyring.
+    #
+    # Changes the session keyring to which the calling process's parent
+    # subscribes to be the that of the calling process.
+    #
+    # The keyring must have link permission available to the calling process,
+    # the parent process must have the same UIDs/GIDs as the calling process,
+    # and the LSM must not reject the replacement. Furthermore, this may not
+    # be used to affect init or a kernel thread.
+    #
+    # Note that the replacement will not take immediate effect upon the parent
+    # process, but will rather be deferred to the next time it returns to
+    # userspace from kernel space.
+    #
+    # @return [Keyring] self
+    # @raise [Errno::ENOMEM] insufficient memory to create a key.
+    # @raise [Errno::EPERM] the credentials of the parent don't match those of
+    #   the caller.
+    # @raise [Errno::EACCES] the named keyring exists, but is not linkable by
+    #   the calling process.
+    def to_parent
+      Lib.keyctl_session_to_parent
+      self
+    end
   end
 
   KeyTypes[:keyring] = Keyring

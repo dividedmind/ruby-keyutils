@@ -218,16 +218,16 @@ module Keyutils
     # Describe the attributes of the key.
     #
     # The caller must have view permission on a key to be able to get a
-    # description of it.
+    # attributes of it.
     #
-    # Description is returned as a hash of the following keys:
+    # Attributes are returned as a hash of the following keys:
     # - +:type+ [Symbol],
     # - +:uid+ [Fixnum],
     # - +:gid+ [Fixnum],
     # - +:perm+ [Fixnum],
     # - +:desc+ [String].
     #
-    # @return [Hash] key description
+    # @return [Hash] key attributes
     # @see #type
     # @see #uid
     # @see #gid
@@ -364,6 +364,30 @@ module Keyutils
     # @see #instantiate
     def negate timeout_s, destination = nil
       Lib.keyctl_negate id, timeout_s, destination.to_i
+      self
+    end
+
+    # Set the expiration timer on a key
+    #
+    # Sets the expiration timer on a key to +timeout_s+ seconds into the
+    # future. Setting timeout to zero cancels the expiration, assuming the key
+    # hasn't already expired.
+    #
+    # When the key expires, further attempts to access it will be met with
+    # error EKEYEXPIRED.
+    #
+    # The caller must have _setattr_ permission on a key to be able change its
+    # timeout.
+    #
+    # @param timeout_s [Fixnum] expiration timer, in seconds
+    # @return [Key] self
+    # @raise [Errno::ENOKEY] the key does not exist.
+    # @raise [Errno::EKEYEXPIRED] the key has already expired.
+    # @raise [Errno::EKEYREVOKED] the key has been revoked.
+    # @raise [Errno::EACCES] the key does not grant _setattr_ permission to
+    #   the calling process.
+    def set_timeout timeout_s
+      Lib.keyctl_set_timeout id, timeout_s
       self
     end
 

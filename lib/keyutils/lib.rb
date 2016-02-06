@@ -321,7 +321,13 @@ module Keyutils
     }
 
     # extern long keyctl_set_timeout(key_serial_t key, unsigned timeout);
-    attach_function :keyctl_set_timeout, [:key_serial_t, :uint], :long
+    attach_function :keyctl_set_timeout, [:key_serial_t, :uint], :long_e, errors: {
+      ENOKEY => "The specified key does not exist",
+      EKEYEXPIRED => "The specified key has already expired",
+      EKEYREVOKED => "The specified key has been revoked",
+      EACCES => "The named key exists, but does not grant setattr permission "\
+        "to the calling process"
+    }
 
     # extern long keyctl_assume_authority(key_serial_t key);
     attach_function :keyctl_assume_authority, [:key_serial_t], :long

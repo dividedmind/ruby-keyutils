@@ -3,6 +3,8 @@ require 'keyutils/key_types'
 
 module Keyutils
   class Keyring < Key
+    include Enumerable
+
     # Clear the contents of the keyring.
     #
     # The caller must have write permission on a keyring to be able clear it.
@@ -126,7 +128,7 @@ module Keyutils
     # @raise [Errno::EKEYEXPIRED] the keyring has expired
     # @raise [Errno::EKEYREVOKED] the keyring had been revoked
     # @raise [Errno::EACCES] the keyring is not readable by the calling process
-    # @see #keys
+    # @see #each
     def read
       super.unpack('L*').map do |serial|
         # try to map to the correct class
@@ -136,6 +138,20 @@ module Keyutils
     end
     alias to_a read
     undef to_s
+
+    # Iterate over linked keys
+    #
+    # @return [Enumerator, Keyring] self if block given, else an Enumerator
+    # @yieldparam key [Key] member of the keyring
+    # @see #read
+    def each &b
+      read.each &b
+    end
+
+    # @return [Fixnum] number of keys linked to this keyring
+    def length
+      read.length
+    end
 
     class << self
       # Set the implicit destination keyring

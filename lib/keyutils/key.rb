@@ -246,14 +246,7 @@ module Keyutils
         buf = FFI::MemoryPointer.new :char, len
         len = Lib.keyctl_describe id, buf, buf.size
       end
-      type, uid, gid, perm, desc = buf.read_string(len - 1).split ';', 5
-      {
-        type: @type = type.intern,
-        uid: uid.to_i,
-        gid: gid.to_i,
-        perm: perm.to_i(16),
-        desc: @description = desc
-      }
+      Key.send :parse_describe, buf.read_string(len - 1)
     end
 
     # Read the key.
@@ -610,6 +603,17 @@ module Keyutils
         else
           new id, type, description
         end
+      end
+
+      def parse_describe description
+        type, uid, gid, perm, desc = description.split ';', 5
+        {
+          type: @type = type.intern,
+          uid: uid.to_i,
+          gid: gid.to_i,
+          perm: perm.to_i(16),
+          desc: @description = desc
+        }
       end
     end
 

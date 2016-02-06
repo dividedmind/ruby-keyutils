@@ -137,7 +137,7 @@ module Keyutils
       end
     end
     alias to_a read
-    undef to_s
+    undef to_s rescue nil
 
     # Iterate over linked keys
     #
@@ -146,6 +146,49 @@ module Keyutils
     # @see #read
     def each &b
       read.each &b
+    end
+
+    # Iterate over keys recursively
+    #
+    # Performs a depth-first recursive scan of the keyring tree and yields for
+    # every link found in the accessible keyrings in that tree.
+    #
+    # Errors are ignored. Inaccessible keyrings are not scanned, but links to
+    # them are still yielded. If key attributes (and hence ype) cannot be
+    # retrieved, a generic {Key} object is yielded and an error that prevented
+    # it is indicated.
+    #
+    # This method yields for each link found in all the keyrings in the tree
+    # and so may be called multiple times for a particular key if that key has
+    # multiple links to it.
+    #
+    # @yieldparam key [Key] the key to which the link points
+    # @yieldparam parent [Keyring, nil] the keyring containing the link or nil
+    #   for the initial key.
+    # @yieldparam attributes [Hash] key attributes, as returned by
+    #   {Key#describe}
+    # @yieldparam error [SystemCallError, nil] error that prevented retrieving
+    #   key attributes
+    #
+    # @return [Enumerator, Keyring] self if block given, else an Enumerator
+    def each_recursive
+      return enum_for __method__ unless block_given?
+
+      Lib.recursive_key_scan serial, ->(parent, key, desc, desc_len, _) do
+        parent = parent == 0 ? nil : Keyring.send(:new, parent, nil)
+        if desc_len > 0
+          attributes = Key.send :parse_describe, desc.read_string(desc_len)
+          key = Key.send :new_dispatch, key, attributes[:type], attributes[:desc]
+          error = nil
+        else
+          attributes = nil
+          key = Key.send :new, key, nil, nil
+          error = SystemCallError.new FFI.errno
+        end
+        yield key, parent, attributes, error
+        0
+      end, nil
+      self
     end
 
     # @return [Fixnum] number of keys linked to this keyring

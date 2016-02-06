@@ -412,7 +412,7 @@ module Keyutils
 
     # typedef int (*recursive_key_scanner_t)(key_serial_t parent, key_serial_t key,
     #               char *desc, int desc_len, void *data);
-    callback :recursive_key_scanner_t, [:key_serial_t, :key_serial_t, :pointer, :size_t, :pointer], :int
+    callback :recursive_key_scanner_t, [:key_serial_t, :key_serial_t, :pointer, :int, :pointer], :int
 
     # extern int recursive_key_scan(key_serial_t key, recursive_key_scanner_t func, void *data);
     attach_function :recursive_key_scan, [:key_serial_t, :recursive_key_scanner_t, :pointer], :int

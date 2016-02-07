@@ -297,6 +297,42 @@ module Keyutils
       nil
     end
 
+    # Get a member "user" key
+    #
+    # Searches the members of the keyring for a :user type key with the
+    # given +description+
+    #
+    # @param description [String] description of the key to find
+    # @return [Key, nil] the key, if found
+    def [] description
+      find do |key|
+        key.type == :user && key.description == description rescue false
+      end
+    end
+
+    # Set a member "user" key
+    #
+    # Updates or creates a member key of type "user" and given description
+    #
+    # @param description [String] the description of the key to update or
+    #   create
+    # @param payload [String] the new key payload
+    # @return [String] +payload+
+    def []= description, payload
+      add :user, description, payload
+    end
+
+    # Return all "user" subkeys
+    #
+    # Keys that cannot be read are ommited.
+    #
+    # @return [{String => String}] user keys' descriptions and their payloads
+    def to_h
+      keys = find_all { |k| k.type == :user rescue false }
+      pairs = keys.map { |k| [k.description, k.to_s] rescue nil }
+      Hash[*pairs.compact.flatten]
+    end
+
     class << self
       # Set the implicit destination keyring
       #

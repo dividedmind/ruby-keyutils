@@ -8,6 +8,7 @@ module Keyutils
     # @see #serial
     attr_accessor :id
     alias to_i id
+    alias hash id
 
     # Get the serial number of this key.
     #
@@ -477,6 +478,27 @@ module Keyutils
     def invalidate
       Lib.keyctl_invalidate id
       self
+    end
+
+    # Key equality
+    #
+    # @return [Boolean] whether the objects point to the same key
+    # @see #eql?
+    def == other
+      serial == other.serial
+    end
+
+    # Key handle equality
+    #
+    # Same as {#==}, except it doesn't dereference the special handles such
+    # as {Keyring::Session}. This means {#eql?} can be false even if the
+    # argument points to the same keyring, as long as only one of them is a
+    # special handle.
+    # @see #==
+    # @see #serial
+    # @return [Boolean] whether the key handles are equal
+    def eql? other
+      to_i == other.to_i
     end
 
     class << self

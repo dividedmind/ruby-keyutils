@@ -422,6 +422,12 @@ module Keyutils
 
     # extern key_serial_t find_key_by_type_and_desc(const char *type, const char *desc,
     #                 key_serial_t destringid);
-    attach_function :find_key_by_type_and_desc, [:string, :string, :key_serial_t], :key_serial_t
+    attach_function :find_key_by_type_and_desc, [:string, :string, :key_serial_t], :key_serial_t, errors: {
+      ENOKEY => "No key was found or the keyring specified is invalid",
+      EKEYEXPIRED => "The key or keyring have expired",
+      EKEYREVOKED => "The key or keyring have been revoked",
+      EACCES => "The key is not accessible or keyring exists, but is not "\
+          "writable by the calling process",
+    }
   end
 end

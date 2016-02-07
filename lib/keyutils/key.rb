@@ -587,6 +587,34 @@ module Keyutils
         nil
       end
 
+      # Find a key by type and description
+      #
+      # Searches for a key with the given type and exact description, firstly
+      # in the thread, process and session keyrings to which a process is
+      # subscribed and secondly in +/proc/keys+.
+      #
+      # If a key is found, and +destination+ is not nil and specifies a
+      # keyring, then the found key will be linked into it.
+      #
+      # @param type [Symbol] key type
+      # @param description [String] key description
+      # @param destination [Keyring, nil] destination keyring
+      # @return [Key, nil] the key, if found
+      #
+      # @raise [Errno::EKEYEXPIRED] key or keyring have expired.
+      # @raise [Errno::EKEYREVOKED] the key or keyring have been revoked.
+      # @raise [Errno::EACCES] the key is not accessible or keyring exists,
+      #   but is not writable by the calling process.
+      def find type, description, destination = nil
+        serial = Lib.find_key_by_type_and_desc \
+            type.to_s,
+            description,
+            destination.to_i
+        new_dispatch serial, type.intern, description
+      rescue Errno::ENOKEY
+        nil
+      end
+
       # De-assume the currently assumed authority.
       # @see #assume_authority
       # @return [void]

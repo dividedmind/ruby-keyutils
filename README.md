@@ -1,8 +1,7 @@
 # Keyutils
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/keyutils`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+This is a wrapper for keyutils library, providing idiomatic Ruby interface for
+Linux kernel keyring.
 
 ## Installation
 
@@ -22,7 +21,24 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+```ruby
+require 'keyutils'
+include Keyutils
+
+ring = Key.find 'keyring', 'myring'
+puts "My very secret key is #{ring['secret:key']}"
+
+new_session = Keyring::Session.join
+ring = new_session.add 'keyring', 'newring', nil
+ring['foo'] = 'bar'
+puts `keyctl show @s`
+
+# prints:
+# Keyring
+#  496820604 --alswrv   1000  1001  keyring: _ses
+#  145266026 --alswrv   1000  1001   \_ keyring: newring
+#  169205931 --alswrv   1000  1001       \_ user: foo
+```
 
 ## Development
 
@@ -32,7 +48,7 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/keyutils.
+Bug reports and pull requests are welcome on GitHub at https://github.com/dividedmind/keyutils.
 
 
 ## License

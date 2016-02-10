@@ -378,7 +378,7 @@ module Keyutils
     #
     # @return (Key) self
     # @see #instantiate
-    # @see .request
+    # @see Keyring#request
     # @raise [Errno::ENOKEY] the key is invalid.
     # @raise [Errno::EKEYREVOKED] the key had been revoked, or the
     #   authorisation has been revoked.
